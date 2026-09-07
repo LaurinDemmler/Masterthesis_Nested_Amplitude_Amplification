@@ -1,0 +1,28 @@
+{
+  "experiments": [
+    {
+      "id": "1",
+      "path_to_instances": "config/Paper_unc_10_35",
+      "path_to_results": "log/results/capweight_bias_sweep",
+      "number_of_samples": 1082
+    },
+    {
+      "id": "3",
+      "path_to_instances": "config/Paper_unc_10_35",
+      "path_to_results": "log/results/capweight_bias_sweep",
+      "number_of_samples": 1082
+    },
+    {
+      "id": "4",
+      "path_to_instances": "config/Debug_bias_weak_10_20",
+      "path_to_results": "log/results/capweight_bias_sweep",
+      "number_of_samples": 464
+    },
+    {
+      "id": "5",
+      "path_to_instances": "config/Debug_bias_weak_10_20",
+      "path_to_results": "log/results/capweight_bias_sweep",
+      "number_of_samples": 464
+    }
+  ]
+}

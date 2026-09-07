@@ -1,0 +1,33 @@
+experiment_name: "Pisinger_uncorrelated_n27_r400_S98_i88"
+random_seed: 88
+notes: "Generated using Pisinger's generator. Type: uncorrelated, Items: 27, Range: 400, Series: 98, Instance: 88"
+number_knapsack: 1
+capacity: 4419
+items:
+- {weight: 395, value: 109}
+- {weight: 39, value: 174}
+- {weight: 61, value: 143}
+- {weight: 54, value: 267}
+- {weight: 167, value: 273}
+- {weight: 149, value: 216}
+- {weight: 200, value: 185}
+- {weight: 7, value: 51}
+- {weight: 320, value: 126}
+- {weight: 277, value: 146}
+- {weight: 159, value: 198}
+- {weight: 358, value: 266}
+- {weight: 343, value: 378}
+- {weight: 55, value: 321}
+- {weight: 16, value: 6}
+- {weight: 40, value: 347}
+- {weight: 8, value: 317}
+- {weight: 147, value: 241}
+- {weight: 36, value: 122}
+- {weight: 249, value: 193}
+- {weight: 280, value: 193}
+- {weight: 27, value: 142}
+- {weight: 399, value: 147}
+- {weight: 354, value: 119}
+- {weight: 104, value: 32}
+- {weight: 395, value: 102}
+- {weight: 333, value: 39}

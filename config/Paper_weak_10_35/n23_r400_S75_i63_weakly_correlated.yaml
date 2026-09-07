@@ -1,0 +1,29 @@
+experiment_name: "Pisinger_weakly_correlated_n23_r400_S75_i63"
+random_seed: 63
+notes: "Generated using Pisinger's generator. Type: weakly_correlated, Items: 23, Range: 400, Series: 75, Instance: 63"
+number_knapsack: 1
+capacity: 3197
+items:
+- {weight: 40, value: 61}
+- {weight: 289, value: 260}
+- {weight: 99, value: 94}
+- {weight: 216, value: 241}
+- {weight: 261, value: 278}
+- {weight: 190, value: 197}
+- {weight: 318, value: 299}
+- {weight: 216, value: 186}
+- {weight: 222, value: 260}
+- {weight: 111, value: 137}
+- {weight: 36, value: 40}
+- {weight: 72, value: 85}
+- {weight: 213, value: 225}
+- {weight: 193, value: 210}
+- {weight: 197, value: 172}
+- {weight: 89, value: 50}
+- {weight: 86, value: 123}
+- {weight: 333, value: 327}
+- {weight: 218, value: 202}
+- {weight: 43, value: 14}
+- {weight: 374, value: 380}
+- {weight: 20, value: 47}
+- {weight: 21, value: 44}

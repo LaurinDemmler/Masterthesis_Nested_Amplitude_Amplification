@@ -1,0 +1,49 @@
+{
+  "experiments": [
+    {
+      "id": "7",
+      "path_to_instances": "config/Paper_unc_10_35",
+      "path_to_results": "log/results/capweight_multi_method_gate_based",
+      "number_of_samples": 1082,
+      "global_bias_factor": 0.25,
+      "nested_inner_bias_factor": 1.0,
+      "nested_outer_bias_factor": 0.25,
+      "cut_inner_bias_factor": 1.0,
+      "cut_outer_bias_factor": 0.0
+    },
+    {
+      "id": "8",
+      "path_to_instances": "config/Paper_weak_10_35",
+      "path_to_results": "log/results/capweight_multi_method_gate_based",
+      "number_of_samples": 1082,
+      "global_bias_factor": 0.25,
+      "nested_inner_bias_factor": 1.0,
+      "nested_outer_bias_factor": 0.25,
+      "cut_inner_bias_factor": 1.0,
+      "cut_outer_bias_factor": 0.0
+    },
+    {
+      "id": "9",
+      "path_to_instances": "config/Paper_unc_10_35",
+      "path_to_results": "log/results/capweight_multi_method_gate_based",
+      "number_of_samples": 1082,
+      "global_bias_factor": 0.0,
+      "nested_inner_bias_factor": 0.0,
+      "nested_outer_bias_factor": 0.0,
+      "cut_inner_bias_factor": 0.0,
+      "cut_outer_bias_factor": 0.0
+    },
+    {
+      "id": "10",
+      "path_to_instances": "config/Paper_weak_10_35",
+      "path_to_results": "log/results/capweight_multi_method_gate_based",
+      "number_of_samples": 1082,
+      "global_bias_factor": 0.0,
+      "nested_inner_bias_factor": 0.0,
+      "nested_outer_bias_factor": 0.0,
+      "cut_inner_bias_factor": 0.0,
+      "cut_outer_bias_factor": 0.0
+    }
+  ],
+  "comment": "Bias factors are multiples of the knapsack size n: bias = factor * n. ids 7/8 are biased, ids 9/10 unbiased."
+}
