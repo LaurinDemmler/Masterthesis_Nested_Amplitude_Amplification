@@ -47,8 +47,10 @@ import thesis_nested_plots as tnp  # noqa: E402
 # Dataset -> input CSVs, mirroring the two narrative notebooks.
 DATASETS = {
     "uncorrelated": {
+        # id1 sweeps the nested (PBC) biases, id3 the cut (PCBC) ones.
         "bias_sweep": [
             RESULTS / "capweight_bias_sweep" / "bias_sweep_capweight_results_id1.csv",
+            RESULTS / "capweight_bias_sweep" / "bias_sweep_capweight_results_id3.csv",
         ],
         "capweight_multi": (
             RESULTS
@@ -77,8 +79,10 @@ DATASETS = {
         ),
     },
     "weakly_correlated": {
+        # id4 sweeps the nested (PBC) biases, id5 the cut (PCBC) ones.
         "bias_sweep": [
             RESULTS / "capweight_bias_sweep" / "bias_sweep_capweight_results_id4.csv",
+            RESULTS / "capweight_bias_sweep" / "bias_sweep_capweight_results_id5.csv",
         ],
         "capweight_multi": (
             RESULTS

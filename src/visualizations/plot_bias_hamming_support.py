@@ -1,25 +1,6 @@
-"""Thesis plot: empirical support for the bias choice b = n/4.
-
-The QTG uses a biased Hadamard gate whose optimal bias (Wilkening et al. 2024,
-Section A 2 a) is
-
-    b_opt = n / Delta - 2  ~=  n / Delta,
-
-where Delta is the Hamming distance between the reference (greedy) solution -
-which provides the initial QMaxSearch threshold - and the optimum. Fixing the
-bias to b = n/4 for the whole run is therefore equivalent to assuming an
-average Hamming distance Delta ~= 4.
-
-The bias only matters when greedy differs from the optimum: for instances with
-Delta = 0 the reference already *is* the optimum and no amplitude amplification
-towards a neighbour is required. Those instances are therefore excluded here,
-so that Delta reflects the neighbourhood the QTG actually has to search.
-
-Reads the per-instance distances produced by
-``plot_greedy_vs_opt_hamming_thesis.py``.
-
-Run from the ``src`` directory:
-    python visualizations/plot_bias_hamming_support.py
+"""
+Run from the repository root:
+    python src/visualizations/plot_bias_hamming_support.py
 """
 import csv
 import pathlib

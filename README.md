@@ -25,12 +25,11 @@ Options: `--dataset {uncorrelated,weakly_correlated,all}`, `--figures {bias,inne
 
 Output (`.pdf` + `.png`): [src/visualizations/Thesis_Results](src/visualizations/Thesis_Results).
 
-The figures regarding the Hamming distance evaluation are standalone (they recompute from instance YAMLs via Gurobi) and must be run from `src/`, in this order:
+The figures regarding the Hamming distance evaluation are standalone (they recompute from instance YAMLs via Gurobi) and must be run in this order:
 
 ```powershell
-cd src
-python visualizations/plot_greedy_vs_opt_hamming_thesis.py
-python visualizations/plot_bias_hamming_support.py
+python src/visualizations/plot_greedy_vs_opt_hamming_thesis.py
+python src/visualizations/plot_bias_hamming_support.py
 ```
 
 ## Running experiments
@@ -68,8 +67,18 @@ In each row the first id is uncorrelated, the second weakly correlated. Experime
 ## Instance generation
 
 [src/generator/InstanceGenerator](src/generator/InstanceGenerator). Pisinger's generator
-(`InstanceGenerator.c`) must be compiled first - the binary is git-ignored.
+(`InstanceGenerator.c`) must be compiled first.
 `InstanceBatchGenerator.py` shells out to it and writes YAML.
+
+The binary is expected next to the source as `generator.exe`:
+
+```powershell
+cd src/generator/InstanceGenerator
+gcc -O2 -o generator.exe InstanceGenerator.c
+```
+
+On Linux/macOS, build with `gcc -O2 -o generator.exe InstanceGenerator.c` as well, or rename the
+output and pass it via `--generator PATH`.
 
 Its `__main__` block runs a hardcoded batch; adapt the parameters (type, n range, r, series,
 count, output folder) to your needs. 
@@ -92,7 +101,7 @@ thesis figures:
 
 | CSV | |
 |---|---|
-| `capweight_bias_sweep/bias_sweep_capweight_results_id{1,4}.csv` | bias sweep |
+| `capweight_bias_sweep/bias_sweep_capweight_results_id{1,3,4,5}.csv` | bias sweep |
 | `capweight_multi_method_gate_based/capweight_multi_method_results_id{7,8,9,10}.csv` | capacity/weight ratio |
 | `depth_fraction_multi_method_gate_based/depth_fraction_multi_method_results_id{1,2}.csv` | depth fraction |
 | `fixed_cost_multi_method_gate_based/fixed_cost_multi_method_results_id{1,2,3,4}.csv` | fixed gate budget |

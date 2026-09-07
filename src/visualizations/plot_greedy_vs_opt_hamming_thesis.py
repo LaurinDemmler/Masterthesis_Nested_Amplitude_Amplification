@@ -1,18 +1,4 @@
-"""Thesis plot: average Hamming distance between greedy and optimal solutions.
 
-Compares two datasets:
-  - Paper_unc_10_35   -> labelled "Uncorrelated"
-  - Paper_weak_10_35  -> labelled "Weakly Correlated"
-
-For every instance the greedy solution (density-sorted heuristic) and the exact
-optimum (Gurobi) are computed, and the Hamming distance between their bitstrings
-is recorded. The script plots the mean Hamming distance versus knapsack size n
-for both datasets, using the corporate colours of the Technical University of
-Munich (TUM).
-
-Run from the ``src`` directory:
-    python visualizations/plot_greedy_vs_opt_hamming_thesis.py
-"""
 import pathlib
 import sys
 from collections import defaultdict
