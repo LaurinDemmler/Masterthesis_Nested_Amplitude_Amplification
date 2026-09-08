@@ -173,7 +173,7 @@ class Grover:
             out_state.set_amplitude(bitstring, f_marked * complex(amp))
 
 
-    def get_result_inner_statistics(
+    def inner_iteration_finder(
         self, remaining_budget=None, cost_factor=None,
         gatec_state_prep=None, gatec_oracle=None,
     ) -> BinaryAmplitudeState:
@@ -240,34 +240,8 @@ class Grover:
                     lower_bound_certified = True
                 
 
-
-                """if total_samples < 4:
-                    if measurement in self._marked:
-                        good_samples += 1
-                    continue  # Need at least 4 samples for CP bound
-                if measurement in self._marked:
-                    good_samples += 1
-                    if grover_iterations==86:
-                        print(f"Sampled good samples: {good_samples} from total samples {total_samples}")
-                    lower_bound_certified = self.cp_certify_lower(
-                        p_lower, good_samples, total_samples, alpha
-                    )
-                    if total_samples >= 4:  # Minimum samples before early stopping
-                    # Check if we're confident the success rate is too low
-                    good_ratio = good_samples / total_samples
-                    if good_ratio <= 0.25:
-                        print(f"Early stop: observed good ratio {good_ratio} <= 0.25")
-                        break
-                    if self._should_stop_early_low(good_samples, total_samples, 0.5, 0.2): #more than 80% sure that less than 40% of states are good
-                        #print(f"Early stop: confident success rate < {p_lower}")
-                        break
-                    if self._is_certification_impossible(good_samples, total_samples, upper_sampling_limit, p_lower, alpha):
-                        print(f"Early stop: certification impossible (need too many good samples)")
-                        break"""
-
-            # If not certified yet, expand the range for iteration sampling.
+            # Sample from exponentially increasing range
             if not lower_bound_certified:
-                #GAS approach
                 k = min(k_max, math.ceil(self.lamda * k))
 
         if not lower_bound_certified:
@@ -275,14 +249,12 @@ class Grover:
             self.inner_iterations = 0
         else:
             self.inner_iterations = grover_iterations  # Keep the last grover_iterations used for outer statistics
-            
-        """if remaining_budget < 0:
-            return None"""
+
         return out_state
 
 
 
-    def get_result_outer_statistics(
+    def grover_adaptive_search(
         self,
         current_best_solution,
         knapsack_instance,
@@ -300,8 +272,6 @@ class Grover:
         Gate-count budgeting: if gatec_state_prep and gatec_oracle are provided,
         the per-step cost is (2j+1)*gatec_state_prep + j*gatec_oracle.
         Otherwise falls back to the old cost formula.
-
-        If global upper sampling bounds are known, on avaerage stay within the territory where nested is advantageous.
         """
         use_gate_cost = (gatec_state_prep is not None and gatec_oracle is not None)
         vals = (optimal_inner_iterations, depth)
@@ -316,20 +286,18 @@ class Grover:
         iteration_count = 0
         if remaining_budget is None:
             remaining_budget = float('inf')
-            max_iterations = np.log(knapsack_instance.num_items**8)/np.log(self.lamda)
+            max_iterations = np.log(knapsack_instance.num_items**8)/np.log(self.lamda) # stale code but technically here one could set a max iter count instead of a budget
         else:
             max_iterations = float('inf')
 
         while iteration_count < max_iterations and not found_better_solution and remaining_budget > 0:
-        #while not found_better_solution:
-
             if optimal_inner_iterations is not None:
+                # a favourable sampling range for nested, also works with normal GAS sampling
                 k = max(
                         1,
                         (knapsack_instance.num_items * (2 * int(math.ceil(self.lamda**iteration_count + 1)))) / (2 * (2 * optimal_inner_iterations * depth + knapsack_instance.num_items)) - 0.5
                     )
             iteration_count += 1 
-            #grover_iterations=int(math.ceil(k))
             grover_iterations = random.randrange(0, int(math.ceil(k)))
             if use_gate_cost:
                 remaining_budget -= (2*grover_iterations + 1) * gatec_state_prep + grover_iterations * gatec_oracle
@@ -355,6 +323,7 @@ class Grover:
                 k = self.lamda * k
             else:
                 found_better_solution = True
+                # if better solution is found measure again to see whether it can be improved with the same iterations.
                 measurement_new = out_state.sample_from()
                 
                 if use_gate_cost:

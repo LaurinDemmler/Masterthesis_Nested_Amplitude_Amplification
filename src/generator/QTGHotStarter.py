@@ -1,14 +1,12 @@
 import time
 from datastructures.OptimizerSolution import OptimizerSolution
 from datastructures.amplitudes import BinaryAmplitudeState
-from generator.greedy import greedy_solver, fractional_greedy, frational_greedy_from_partial_bitstring
+from generator.greedy import greedy_solver, fractional_greedy, fractional_greedy_from_partial_bitstring
 from generator.QTG import AmplitudeAssigner, AmplitudeAssignerQTGk, AmplitudeAssignerQTGnk
 from generator.GurobiSolver import GurobiSolver
 
 class QTGHotStarter:
-    """Wrapper for Hot Starting using QTG.
-    Expects the knapsack to already be in the desired item order (value-sorted, density-sorted, etc.).
-    The greedy solution is always computed on a density-sorted copy and remapped to the knapsack's current order."""
+    """Wrapper for Hot Starting using QTG."""
     def __init__(self, knapsack, depth: int, verbose: bool = False, current_best_solution=None):
         if depth < 0 or depth > knapsack.num_items:
             raise ValueError(f"depth must be in [0, {knapsack.num_items}]")
@@ -117,14 +115,7 @@ class QTGHotStarter:
         density_sorted = self.knapsack._copy()
         density_sorted.sort_items_by_density()
         return [state for state in marked_states
-                if self.greedy_threshold < frational_greedy_from_partial_bitstring(self.knapsack, state, density_sorted_copy=density_sorted).total_value]
-    
-    def get_marked_states_BnB(self) -> list[OptimizerSolution]:
-        """Return all partial bitstrings (length self.depth) whose ceiling-Dantzig
-        upper bound strictly exceeds the greedy threshold.  Direct DFS enumeration."""
-        return GurobiSolver().feasible_states_with_ceiling_dantzig_ub(
-            self.knapsack, self.greedy_threshold, self.depth
-        )
+                if self.greedy_threshold < fractional_greedy_from_partial_bitstring(self.knapsack, state, density_sorted_copy=density_sorted).total_value]
 
     def get_marked_states_cut(self, cut_degree: int) -> list[OptimizerSolution]:
         """Return all partial bitstrings (length self.depth) whose cut upper

@@ -80,7 +80,7 @@ def fractional_greedy(knapsack_instance):
         total_weight=total_weight
     )
     
-def frational_greedy_from_partial_bitstring(knapsack_instance, partial_solution: OptimizerSolution, density_sorted_copy=None):
+def fractional_greedy_from_partial_bitstring(knapsack_instance, partial_solution: OptimizerSolution, density_sorted_copy=None):
     """Fractional greedy solver that starts from a given partial bitstring.
     Works with any item ordering. The items that are added greedily are always density-sorted, but the output bitstring is in the input knapsack's current order."""
     if density_sorted_copy is None:

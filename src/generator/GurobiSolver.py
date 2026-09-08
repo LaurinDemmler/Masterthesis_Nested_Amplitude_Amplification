@@ -150,66 +150,6 @@ class GurobiSolver:
         return [_solution_from_bitstring(knapsackInstance, s) for s in solutions]
     
 
-    def feasible_states_with_ceiling_dantzig_ub(
-        self,
-        knapsackInstance,
-        greedyThreshold: float,
-        searchDepth: int,
-        max_solutions: int = 200000,
-    ) -> list[OptimizerSolution]:
-        """
-        Enumerate all partial bitstrings (length searchDepth) whose
-        ceiling-Dantzig upper bound strictly exceeds greedyThreshold.
-
-        Ceiling-Dantzig UB: with remaining items in density order, greedily
-        fill the residual capacity; the first item that doesn't fit is
-        still added in full ("ceiling"), then the sweep stops.
-
-        Replaces the LP-relaxation (fractional) variant so that the
-        classical filter matches the quantum BnB UB-build block (see
-        bnb_gatecost.txt).
-        """
-        depth = max(0, min(searchDepth, knapsackInstance.num_items))
-        n = knapsackInstance.num_items
-        weights, values, cap = knapsackInstance.weights, knapsackInstance.values, knapsackInstance.capacity
-
-        # Density-sort remaining items (defensive — works regardless of caller order)
-        remaining = sorted(
-            ((weights[j], values[j]) for j in range(depth, n)),
-            key=lambda wv: -wv[1] / wv[0],
-        )
-        sum_v_remaining = sum(v for _, v in remaining)
-
-        def ceiling_ub(pv: float, rem_cap: int) -> float:
-            ub = pv
-            for w, v in remaining:
-                ub += v
-                if w > rem_cap:
-                    return ub
-                rem_cap -= w
-            return ub
-
-        eps = 1e-9
-        rhs = greedyThreshold + eps
-        solutions: list[str] = []
-
-        def dfs(idx: int, pw: int, pv: float, bits: int) -> None:
-            if len(solutions) >= max_solutions:
-                return
-            if pv + sum(values[idx:depth]) + sum_v_remaining < rhs:
-                return
-            if idx == depth:
-                if ceiling_ub(pv, cap - pw) > rhs - eps:
-                    solutions.append(format(bits, f'0{depth}b') if depth > 0 else '')
-                return
-            nw = pw + weights[idx]
-            if nw <= cap:
-                dfs(idx + 1, nw, pv + values[idx], (bits << 1) | 1)
-            dfs(idx + 1, pw, pv, bits << 1)
-
-        dfs(0, 0, 0.0, 0)
-        return [_solution_from_bitstring(knapsackInstance, s) for s in solutions]
-
     def feasible_states_with_cut_upper_bound(
         self,
         knapsackInstance,

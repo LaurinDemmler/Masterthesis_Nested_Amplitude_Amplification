@@ -6,7 +6,7 @@ from Simulator.ResourceEstimator import QTGResourceEstimator
 import numpy as np
 
 
-# ── Cost factor functions (kept for backward compatibility) ───────────
+# ── Cost factor functions, this is deprecated here but reflects the paper's cost counting ───────────
 
 def cost_factor_nested(depth):
     return depth
@@ -145,140 +145,9 @@ def _prepare_knapsack(knapsack_instance: KnapsackInstance, order: str) -> Knapsa
         return ks
     return knapsack_instance
 
-# ── Solvers ─────────────────────────────────────────────
+
+
 class Solver:
-    def __init__(self, knapsack_instance: KnapsackInstance, depth: int, bias: float, iterations: int, order: str = "value"):
-        self.knapsack_instance = _prepare_knapsack(knapsack_instance, order)
-        self.depth = depth
-        self.bias = bias
-        self.iterations = iterations
-        self.order = order
-
-    def solve_nested(self):
-        current_best_solution = QTGHotStarter(self.knapsack_instance, depth=self.depth).greedy()
-        no_update_counter = 0
-        iter = 0
-        inner_iterations = []
-        outer_iterations = []
-        while no_update_counter < 3 and iter < self.iterations:
-            iter += 1
-            HotStart = QTGHotStarter(self.knapsack_instance, depth=self.depth, current_best_solution=current_best_solution, verbose=False)
-            post_QTGk_states_good  = HotStart.partial_hot_start_QTG_k(bias=self.bias)
-            globally_good_states = HotStart.get_globally_marked_states()
-            grover1 = Grover(post_QTGk_states_good)
-            inner_iterations.append(grover1._iterations)
-            post_inner_grover_state = grover1.get_result()
-
-
-            postQTGnk_states = HotStart.partial_hot_start_QTG_nk(post_inner_grover_state,globally_good_states, bias=self.bias)
-
-            grover2 = Grover(postQTGnk_states)
-            outer_iterations.append(grover2._iterations)
-            final_state = grover2.get_result()
-            measurement = final_state.sample_from()
-            if measurement is not None:
-                intermediate_solution = _solution_from_bitstring(self.knapsack_instance, measurement)
-            if measurement is None or intermediate_solution.total_value <= current_best_solution.total_value:
-                no_update_counter += 1
-            else:
-                no_update_counter = 0
-                current_best_solution = intermediate_solution
-        return (current_best_solution, inner_iterations, outer_iterations)
-        
-    def solve_global(self):
-        current_best_solution = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items).greedy()
-        no_update_counter = 0
-        iter = 0
-        global_iterations = []
-        while no_update_counter < 3 and iter < self.iterations:
-            iter += 1
-            HotStart = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items, current_best_solution=current_best_solution, verbose=False)
-            post_QTG_state_good = HotStart.hot_start(bias=self.bias)
-            grover = Grover(post_QTG_state_good)
-            global_iterations.append(grover._iterations)
-            post_grover_state = grover.get_result()
-            measurement = post_grover_state.sample_from()
-            if measurement is not None:
-                intermediate_solution = _solution_from_bitstring(self.knapsack_instance, measurement)
-            if measurement is None or intermediate_solution.total_value <= current_best_solution.total_value:
-                no_update_counter += 1
-            else:
-                no_update_counter = 0
-                current_best_solution = intermediate_solution
-        return (current_best_solution, global_iterations)
-    
-
-class SmartSolver:
-    def __init__(self, knapsack_instance: KnapsackInstance, bias: float, iterations: int, order: str = "value"):
-        self.knapsack_instance = _prepare_knapsack(knapsack_instance, order)
-        self.bias = bias
-        self.iterations = iterations
-        self.order = order
-
-    def smart_solve(self):
-        hot_starter = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items)
-        current_best_solution = hot_starter.greedy()
-        fractional_optimum = hot_starter.get_fractional_optimum()
-        no_update_counter = 0
-        iter = 0
-        inner_iterations = []
-        outer_iterations = []
-        depths = []
-        global_iterations = []
-        while no_update_counter < 3 and iter < self.iterations:
-            iter += 1
-            if current_best_solution.total_value <= fractional_optimum.total_value*0.96:
-                
-                HotStart = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items, current_best_solution=current_best_solution, verbose=False)
-                post_QTG_state_good = HotStart.hot_start(bias=self.bias)
-                grover = Grover(post_QTG_state_good)
-                global_iterations.append(grover._iterations)
-                post_grover_state = grover.get_result()
-                measurement = post_grover_state.sample_from()
-                if measurement is not None:
-                    intermediate_solution = _solution_from_bitstring(self.knapsack_instance, measurement)
-                if measurement is None or intermediate_solution.total_value <= current_best_solution.total_value:
-                    no_update_counter += 1
-                else:
-                    no_update_counter = 0
-                    current_best_solution = intermediate_solution
-            else:
-                depth = self.get_remaining_value_depth(current_best_solution.total_value)
-                depths.append(depth)
-                HotStart = QTGHotStarter(self.knapsack_instance, depth=depth, current_best_solution=current_best_solution, verbose=False)
-                post_QTGk_states_good  = HotStart.partial_hot_start_QTG_k(bias=self.bias)
-                globally_good_states = HotStart.get_globally_marked_states()
-                grover1 = Grover(post_QTGk_states_good)
-                inner_iterations.append(grover1._iterations)
-                post_inner_grover_state = grover1.get_result()
-                postQTGnk_states = HotStart.partial_hot_start_QTG_nk(post_inner_grover_state,globally_good_states, bias=self.bias)
-                grover2 = Grover(postQTGnk_states)
-                outer_iterations.append(grover2._iterations)
-                final_state = grover2.get_result()
-                measurement = final_state.sample_from()
-                if measurement is not None:
-                    intermediate_solution = _solution_from_bitstring(self.knapsack_instance, measurement)
-                if measurement is None or intermediate_solution.total_value <= current_best_solution.total_value:
-                    no_update_counter += 1
-                else:
-                    no_update_counter = 0
-                    current_best_solution = intermediate_solution
-        return (current_best_solution, inner_iterations, outer_iterations, global_iterations, depths)
-
-    def get_remaining_value_depth(self, T: float, ratio: float = 0.6) -> int:
-        if T == 0:
-            raise ValueError("T must be nonzero.")
-        n = self.knapsack_instance.num_items
-        vals = np.array([self.knapsack_instance.get_remaining_value(d) for d in range(1, n + 1)]) / T
-        depth = int(np.argmin(np.abs(vals - ratio))) + 1
-        ratio = vals[depth - 1]
-        #print(f'SmartSolver selected depth {depth} with remaining value ratio {ratio:.4f} for T={T}.')
-        return depth
-    
-    def get_fractional_depth(self, fraction: float) -> int:
-        return int(fraction*self.knapsack_instance.num_items)
-    
-class StatisticalSmartSolver(SmartSolver):
     def __init__(self, knapsack_instance: KnapsackInstance, bias: float, iterations: int, order: str = "value",
                  termination_cost_threshold=None, termination_gate_threshold=None,
                  bias_in: float = None, bias_out: float = None):
@@ -308,8 +177,16 @@ class StatisticalSmartSolver(SmartSolver):
             self.termination_gate_threshold = float('inf')
             self.no_update_threshold = 1
             self._re = None
+
+    def get_remaining_value_depth(self, T: float, ratio: float = 0.6) -> int:
+        if T == 0:
+            raise ValueError("T must be nonzero.")
+        n = self.knapsack_instance.num_items
+        vals = np.array([self.knapsack_instance.get_remaining_value(d) for d in range(1, n + 1)]) / T
+        depth = int(np.argmin(np.abs(vals - ratio))) + 1
+        return depth
     
-    def smart_solve_statistics(self):
+    def nested_solve(self):
         hot_starter = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items)
         current_best_solution = hot_starter.greedy()
         fractional_optimum = hot_starter.get_fractional_optimum()
@@ -351,11 +228,11 @@ class StatisticalSmartSolver(SmartSolver):
             if self.use_gate_cost:
                 inner_state_prep = self._re.gatec_qtg_partial(depth)
                 inner_oracle = self._re.gatec_oracle_inner(depth, T_current)
-                post_inner_grover_state = grover1.get_result_inner_statistics(
+                post_inner_grover_state = grover1.inner_iteration_finder(
                     remaining_budget=gate_budget,
                     gatec_state_prep=inner_state_prep, gatec_oracle=inner_oracle)
             else:
-                post_inner_grover_state = grover1.get_result_inner_statistics(
+                post_inner_grover_state = grover1.inner_iteration_finder(
                     remaining_budget=budget, cost_factor=cost_factor_nested(depth))
 
             inner_iterations_statistics.append(grover1.inner_iterations_confidence)
@@ -379,13 +256,13 @@ class StatisticalSmartSolver(SmartSolver):
             if self.use_gate_cost:
                 outer_state_prep = self._re.gatec_outer_state_prep(depth, grover1.inner_iterations, T_current)
                 outer_oracle = self._re.gatec_oracle_full(T_current)
-                found_better_solution, measurement, remaining_budget = grover2.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover2.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance,
                     optimal_inner_iterations=grover1.inner_iterations, depth=depth,
                     remaining_budget=gate_budget,
                     gatec_state_prep=outer_state_prep, gatec_oracle=outer_oracle)
             else:
-                found_better_solution, measurement, remaining_budget = grover2.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover2.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance,
                     optimal_inner_iterations=grover1.inner_iterations, depth=depth,
                     remaining_budget=budget)
@@ -412,7 +289,7 @@ class StatisticalSmartSolver(SmartSolver):
         
         return (current_best_solution, inner_iterations, inner_iterations_statistics, outer_iterations_statistics, global_iterations_statistics, depths, optimal_inner_iterations_classically, optimal_outer_iterations_classically, cost_thresholds)
     
-    def solve_global_statistics(self):
+    def baseline_solve(self):
         hot_starter = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items)
         current_best_solution = hot_starter.greedy()
         #optimal_solution = hot_starter.get_optimal_solution()
@@ -438,12 +315,12 @@ class StatisticalSmartSolver(SmartSolver):
             if self.use_gate_cost:
                 global_state_prep = self._re.gatec_qtg_full()
                 global_oracle = self._re.gatec_oracle_full(T_current)
-                found_better_solution, measurement, remaining_budget = grover.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance,
                     remaining_budget=gate_budget,
                     gatec_state_prep=global_state_prep, gatec_oracle=global_oracle)
             else:
-                found_better_solution, measurement, remaining_budget = grover.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance, remaining_budget=budget)
 
             global_iterations_statistics.append(grover.outer_iterations_confidence)
@@ -465,7 +342,7 @@ class StatisticalSmartSolver(SmartSolver):
     
     
     
-    def solve_cuts_statistics(self):
+    def cut_solve(self):
         """Cuts are applied to the inner list of marked states"""
         hot_starter = QTGHotStarter(self.knapsack_instance, depth=self.knapsack_instance.num_items)
         current_best_solution = hot_starter.greedy()
@@ -488,7 +365,7 @@ class StatisticalSmartSolver(SmartSolver):
             """if current_best_solution.total_value == optimal_solution.total_value:
                 break"""
             """if current_best_solution.total_value >= fractional_optimum.total_value*0.995:
-                print(f'SmartSolver reached solution with value {current_best_solution.total_value} close to fractional optimum {fractional_optimum.total_value}. Stopping iterations.')
+                print(f'Solver reached solution with value {current_best_solution.total_value} close to fractional optimum {fractional_optimum.total_value}. Stopping iterations.')
                 break"""
 
             iter += 1
@@ -507,16 +384,16 @@ class StatisticalSmartSolver(SmartSolver):
             globally_good_states = HotStart.get_globally_marked_states()
             grover1 = Grover(post_QTGk_states_good, verbose=False)
             
-            # Inner Grover — pass gate-count params when using gate budget
+
             if self.use_gate_cost:
                 inner_state_prep = self._re.gatec_qtg_partial_cut(depth)
                 inner_oracle = self._re.gatec_oracle_inner_cut(depth, T_current)
-                post_inner_grover_state = grover1.get_result_inner_statistics(
+                post_inner_grover_state = grover1.inner_iteration_finder(
                     remaining_budget=gate_budget,
                     gatec_state_prep=inner_state_prep, gatec_oracle=inner_oracle)
             else:
                 cut_cf = cost_factor_cut(depth, self.knapsack_instance.capacity)
-                post_inner_grover_state = grover1.get_result_inner_statistics(
+                post_inner_grover_state = grover1.inner_iteration_finder(
                     remaining_budget=budget, cost_factor=cut_cf)
             
             inner_iterations_statistics.append(grover1.inner_iterations_confidence)
@@ -542,14 +419,14 @@ class StatisticalSmartSolver(SmartSolver):
             if self.use_gate_cost:
                 outer_state_prep = self._re.gatec_outer_state_prep_cut(depth, grover1.inner_iterations, T_current)
                 outer_oracle = self._re.gatec_oracle_full(T_current)
-                found_better_solution, measurement, remaining_budget = grover2.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover2.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance,
                     optimal_inner_iterations=grover1.inner_iterations, depth=depth,
                     remaining_budget=gate_budget,
                     gatec_state_prep=outer_state_prep, gatec_oracle=outer_oracle)
             else:
                 cut_cf = cost_factor_cut(depth, self.knapsack_instance.capacity)
-                found_better_solution, measurement, remaining_budget = grover2.get_result_outer_statistics(
+                found_better_solution, measurement, remaining_budget = grover2.grover_adaptive_search(
                     current_best_solution, self.knapsack_instance,
                     optimal_inner_iterations=grover1.inner_iterations, depth=depth,
                     remaining_budget=budget, cost_factor=cut_cf)

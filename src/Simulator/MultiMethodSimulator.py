@@ -1,3 +1,8 @@
+"""
+This file is the setup for all experiments. Results are stored in a csv written to at the end of the simulation.
+"""
+
+
 from dataclasses import asdict, dataclass, field
 import random
 import pathlib
@@ -16,7 +21,7 @@ from Simulator.Solver import (_prepare_knapsack,
                               compute_inner_gatecost_cut, compute_outer_gatecost_cut,
                               build_resource_estimator,
                               find_depth_for_remaining_value,
-                              StatisticalSmartSolver)
+                              Solver)
 from generator.GurobiSolver import _solution_from_bitstring
 from typing import List, Union
 
@@ -163,9 +168,6 @@ class MultiMethodBiasSweepResult:
 
 
 class MultiMethodSimulator:
-    """Runs multiple solving methods on the same knapsack instances and records
-    comparable results."""
-
     def __init__(self, path_to_instances, path_to_results):
         self.path_to_instances = pathlib.Path(path_to_instances)
         self.path_to_results = pathlib.Path(path_to_results)
@@ -178,7 +180,7 @@ class MultiMethodSimulator:
                                         cut_outer_bias_factor: float,
                                         order: str = "value",
                                         id=None):
-        """Compare nested, global, and BnB across depth fractions, keyed by capweight ratio."""
+
         yaml_paths = list(self.path_to_instances.rglob("*.yml")) + list(self.path_to_instances.rglob("*.yaml"))
         if not yaml_paths:
             raise FileNotFoundError(f"No YAML files found under {self.path_to_instances}")
@@ -231,7 +233,7 @@ class MultiMethodSimulator:
                                              cut_outer_bias_factor: float,
                                              order: str = "value",
                                              id=None):
-        """Compare nested, global, and BnB across remaining-value ratios and T values."""
+        """This is not currently in the thesis but in the paper that accompanies it so the functionality is left here as dead code."""
         yaml_paths = list(self.path_to_instances.rglob("*.yml")) + list(self.path_to_instances.rglob("*.yaml"))
         if not yaml_paths:
             raise FileNotFoundError(f"No YAML files found under {self.path_to_instances}")
@@ -270,7 +272,6 @@ class MultiMethodSimulator:
                     if depth < 1 or depth >= knapsack.num_items:
                         continue
                     instance_sort = InstanceFilter(knapsack) 
-                    #CURRENTLY ALL CAPWEIGHTS
                     if greedy_is_optimal and not instance_sort.filter_capweight_ratio_range(0.6, 1):
                         continue
                     actual_remaining_value_ratio = knapsack.get_remaining_value(depth) / actual_T
@@ -301,7 +302,7 @@ class MultiMethodSimulator:
                                              cut_outer_bias_factor: float,
                                              order: str = "value",
                                              id=None):
-        """Compare nested, global, and BnB across depth fractions k/n."""
+        """Compare nested and cut across depth fractions k/n."""
         yaml_paths = list(self.path_to_instances.rglob("*.yml")) + list(self.path_to_instances.rglob("*.yaml"))
         if not yaml_paths:
             raise FileNotFoundError(f"No YAML files found under {self.path_to_instances}")
@@ -372,10 +373,7 @@ class MultiMethodSimulator:
         T: int = -1,
         remaining_value_ratio: float = -1.0,
     ) -> MultiMethodResult:
-        """Single-shot simulation of global, nested, and BnB on one (instance, depth) pair.
-        Mirrors _unitSim_statistics but runs all three methods.
-        If optimality_threshold is given, use it for the to_optimality checks
-        instead of current_best_solution.total_value."""
+        """Single improvement simulation."""
 
         threshold = optimality_threshold if optimality_threshold is not None else (
             current_best_solution.total_value if current_best_solution is not None else 0
@@ -388,7 +386,7 @@ class MultiMethodSimulator:
         HotStart_global = QTGHotStarter(ks, depth=n, verbose=False, current_best_solution=current_best_solution)
         post_QTG_state_good_global = HotStart_global.hot_start(bias=bias)
         grover_global = Grover(post_QTG_state_good_global)
-        _, measurement_global, _ = grover_global.get_result_outer_statistics(current_best_solution, ks)
+        _, measurement_global, _ = grover_global.grover_adaptive_search(current_best_solution, ks)
 
         global_iterations_statistics = [grover_global.outer_iterations_confidence]
         optimal_global_iterations_classically = [grover_global._iterations]
@@ -410,14 +408,14 @@ class MultiMethodSimulator:
 
 
         grover1 = Grover(post_QTGk_states_good)
-        post_inner_grover_state = grover1.get_result_inner_statistics()
+        post_inner_grover_state = grover1.inner_iteration_finder()
         inner_iterations_statistics = [grover1.inner_iterations_confidence]
         inner_iterations = [grover1.inner_iterations]
         optimal_inner_iterations_classically = [grover1._iterations]
 
         postQTGnk_states = HotStart.partial_hot_start_QTG_nk(post_inner_grover_state, globally_good_states, bias=bias_out_nested)
         grover2 = Grover(postQTGnk_states)
-        _, measurement_nested, _ = grover2.get_result_outer_statistics(
+        _, measurement_nested, _ = grover2.grover_adaptive_search(
             current_best_solution, ks, optimal_inner_iterations=grover1.inner_iterations, depth=depth)
         outer_iterations_statistics = [grover2.outer_iterations_confidence]
         optimal_outer_iterations_classically = [grover2._iterations]
@@ -448,14 +446,14 @@ class MultiMethodSimulator:
 
         grover1_cut = Grover(post_QTGk_cut)
         cut_cf = cost_factor_cut(depth, knapsack.capacity)
-        post_inner_cut = grover1_cut.get_result_inner_statistics(cost_factor=cut_cf)
+        post_inner_cut = grover1_cut.inner_iteration_finder(cost_factor=cut_cf)
         cut_inner_statistics = [grover1_cut.inner_iterations_confidence]
         cut_inner_iterations = [grover1_cut.inner_iterations]
         cut_optimal_inner_classically = [grover1_cut._iterations]
 
         postQTGnk_cut = HotStart_cut.partial_hot_start_QTG_nk(post_inner_cut, globally_good_cut, bias=bias_out_cut)
         grover2_cut = Grover(postQTGnk_cut)
-        _, measurement_cut, _ = grover2_cut.get_result_outer_statistics(
+        _, measurement_cut, _ = grover2_cut.grover_adaptive_search(
             current_best_solution_cut, ks, optimal_inner_iterations=grover1_cut.inner_iterations,
             depth=depth, cost_factor=cut_cf)
         cut_outer_statistics = [grover2_cut.outer_iterations_confidence]
@@ -615,19 +613,18 @@ class MultiMethodSimulator:
         capweight: float = -1.0,
         greedy_is_optimal: bool = False,
     ) -> MultiMethodBiasSweepResult:
-        """Single-shot simulation sweeping inner/outer bias for nested (and cut).
-        Global always uses n/4 as bias."""
+        """Single improvement simulation sweeping all biases."""
 
         threshold = current_best_solution.total_value if current_best_solution is not None else 0
 
-        # ── 1. Global (bias fixed at n/4) ────────────────────────────────
+        # ── 1. Global ────────────────────────────────
         ks = _prepare_knapsack(knapsack, "value")
         n = len(ks.items)
         global_bias = n / 4
         HotStart_global = QTGHotStarter(ks, depth=n, verbose=False, current_best_solution=current_best_solution)
         post_QTG_state_good_global = HotStart_global.hot_start(bias=global_bias)
         grover_global = Grover(post_QTG_state_good_global)
-        _, measurement_global, _ = grover_global.get_result_outer_statistics(current_best_solution, ks)
+        _, measurement_global, _ = grover_global.grover_adaptive_search(current_best_solution, ks)
 
         global_iterations_statistics = [grover_global.outer_iterations_confidence]
         optimal_global_iterations_classically = [grover_global._iterations]
@@ -647,14 +644,14 @@ class MultiMethodSimulator:
         globally_good_states = HotStart.get_globally_marked_states()
 
         grover1 = Grover(post_QTGk_states_good)
-        post_inner_grover_state = grover1.get_result_inner_statistics()
+        post_inner_grover_state = grover1.inner_iteration_finder()
         inner_iterations_statistics = [grover1.inner_iterations_confidence]
         inner_iterations = [grover1.inner_iterations]
         optimal_inner_iterations_classically = [grover1._iterations]
 
         postQTGnk_states = HotStart.partial_hot_start_QTG_nk(post_inner_grover_state, globally_good_states, bias=outer_bias)
         grover2 = Grover(postQTGnk_states)
-        _, measurement_nested, _ = grover2.get_result_outer_statistics(
+        _, measurement_nested, _ = grover2.grover_adaptive_search(
             current_best_solution, ks, optimal_inner_iterations=grover1.inner_iterations, depth=depth)
         outer_iterations_statistics = [grover2.outer_iterations_confidence]
         optimal_outer_iterations_classically = [grover2._iterations]
@@ -684,14 +681,14 @@ class MultiMethodSimulator:
 
         grover1_cut = Grover(post_QTGk_cut)
         cut_cf = cost_factor_cut(depth, knapsack.capacity)
-        post_inner_cut = grover1_cut.get_result_inner_statistics(cost_factor=cut_cf)
+        post_inner_cut = grover1_cut.inner_iteration_finder(cost_factor=cut_cf)
         cut_inner_statistics = [grover1_cut.inner_iterations_confidence]
         cut_inner_iterations = [grover1_cut.inner_iterations]
         cut_optimal_inner_classically = [grover1_cut._iterations]
 
         postQTGnk_cut = HotStart_cut.partial_hot_start_QTG_nk(post_inner_cut, globally_good_cut, bias=outer_bias)
         grover2_cut = Grover(postQTGnk_cut)
-        _, measurement_cut, _ = grover2_cut.get_result_outer_statistics(
+        _, measurement_cut, _ = grover2_cut.grover_adaptive_search(
             current_best_solution_cut, ks, optimal_inner_iterations=grover1_cut.inner_iterations,
             depth=depth, cost_factor=cut_cf)
         cut_outer_statistics = [grover2_cut.outer_iterations_confidence]
@@ -815,21 +812,21 @@ class MultiMethodSimulator:
                     termination_gate_cost = int(constant * n ** termination_exponent)
 
                     # ── Global ──
-                    solver_global = StatisticalSmartSolver(knapsack, bias=bias, iterations=50, order=order, termination_gate_threshold=termination_gate_cost)
-                    global_measurement, global_statistics, optimal_global_iterations_classically, global_thresholds = solver_global.solve_global_statistics()
+                    solver_global = Solver(knapsack, bias=bias, iterations=50, order=order, termination_gate_threshold=termination_gate_cost)
+                    global_measurement, global_statistics, optimal_global_iterations_classically, global_thresholds = solver_global.baseline_solve()
 
                     # ── Nested ──
-                    smart_solver = StatisticalSmartSolver(knapsack, bias=bias, iterations=50, order=order, termination_gate_threshold=termination_gate_cost, bias_in=bias_in_nested, bias_out=bias_out_nested)
-                    nested_solution, smart_inner, smart_inner_statistics, smart_outer_statistics, smart_global_statistics, depths, optimal_inner_iterations_classically, optimal_outer_iterations_classically, nested_thresholds = smart_solver.smart_solve_statistics()
+                    solver_nested = Solver(knapsack, bias=bias, iterations=50, order=order, termination_gate_threshold=termination_gate_cost, bias_in=bias_in_nested, bias_out=bias_out_nested)
+                    nested_solution, smart_inner, smart_inner_statistics, smart_outer_statistics, smart_global_statistics, depths, optimal_inner_iterations_classically, optimal_outer_iterations_classically, nested_thresholds = solver_nested.nested_solve()
 
                     # ── Cut ──
-                    cut_solver = StatisticalSmartSolver(knapsack, bias=bias, iterations=50, order="valweight",
+                    cut_solver = Solver(knapsack, bias=bias, iterations=50, order="valweight",
                                                         termination_gate_threshold=termination_gate_cost, bias_in=bias_in_cut, bias_out=bias_out_cut)
-                    cut_solution, cut_inner, cut_inner_statistics, cut_outer_statistics, cut_global_statistics, cut_depths, cut_optimal_inner_classically, cut_optimal_outer_classically, cut_thresholds = cut_solver.solve_cuts_statistics()
+                    cut_solution, cut_inner, cut_inner_statistics, cut_outer_statistics, cut_global_statistics, cut_depths, cut_optimal_inner_classically, cut_optimal_outer_classically, cut_thresholds = cut_solver.cut_solve()
 
                     # ── Gate cost calculations ──
                     re_global = build_resource_estimator(solver_global.knapsack_instance)
-                    re_nested = build_resource_estimator(smart_solver.knapsack_instance)
+                    re_nested = build_resource_estimator(solver_nested.knapsack_instance)
                     re_cut = build_resource_estimator(cut_solver.knapsack_instance)
 
                     # Global gate cost
